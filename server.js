@@ -158,6 +158,10 @@ const server=http.createServer(async(req,res)=>{
    if("avatar" in p) db.prepare("UPDATE users SET avatar=? WHERE id=?").run(avatar,user.id);
    return json(res,{ok:true,profile:db.prepare("SELECT id,username,email,avatar,xp,vipLevel FROM users WHERE id=?").get(user.id)});
   }
+  if(u.pathname==="/api/admin/audit" && req.method==="GET"){
+   if(req.headers["x-admin-token"]!==process.env.ADMIN_TOKEN)return json(res,{error:"Admin authentication required"},401);
+   return json(res,{logs:db.prepare("SELECT actor,action,target,createdAt FROM auditLogs ORDER BY createdAt DESC LIMIT 100").all()});
+  }
   if(u.pathname==="/api/referral" && req.method==="GET"){
    const user=sessionUser(req); if(!user)return json(res,{error:"Session required"},401);
    const code="SW"+user.id.replaceAll("-","").slice(0,8).toUpperCase();
@@ -218,6 +222,7 @@ const server=http.createServer(async(req,res)=>{
       .run(newBalance,stake,win?stake:0,user.id);
     db.prepare("INSERT INTO plays(id,userId,roundId,game,selection,virtualStake,result,profit,createdAt) VALUES(?,?,?,?,?,?,?,?,?)")
       .run(pid,user.id,"SW"+roundNo,game,selection,stake,win?"win":"loss",profit,nowISO());
+    db.prepare("UPDATE users SET xp=xp+?,vipLevel=? WHERE id=?").run(10+(win?20:0),vipForXp((db.prepare("SELECT xp FROM users WHERE id=?").get(user.id).xp)+10+(win?20:0)),user.id);
     db.prepare("INSERT INTO auditLogs(id,actor,action,target,createdAt) VALUES(?,?,?,?,?)").run(id(),user.id,"virtual_play",pid,nowISO());
     db.exec("COMMIT");
    }catch(e){db.exec("ROLLBACK");throw e}
