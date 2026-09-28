@@ -96,7 +96,7 @@ function pick(el,val){document.querySelectorAll('.choice,.ball').forEach(x=>x.cl
 async function placeBet(){
  if(!selected){toast('Choose a result first');return}
  try{
-  const r=await fetch('/api/play',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({selection:selected,virtualStake:stake})}).then(async x=>{const d=await x.json();if(!x.ok)throw new Error(d.error||'Play failed');return d});
+  const r=await fetch('/api/play',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({selection:selected,virtualStake:stake,game:currentGame})}).then(async x=>{const d=await x.json();if(!x.ok)throw new Error(d.error||'Play failed');return d});
   balance=r.wallet.virtualCoins;totalBets++;if(r.play.result==='win')totalWins++;
   addHistory(stake,r.play.profit,selected);money();updateStats();
   toast(r.play.result==='win'?'🎉 Virtual win +'+r.play.profit+' VC':'Round complete — virtual loss '+Math.abs(r.play.profit)+' VC');
@@ -108,8 +108,8 @@ function addHistory(s,p,r){let tr=document.createElement('tr');tr.innerHTML='<td
 function copyReferral(){navigator.clipboard?.writeText('SW777-FRIEND').then(()=>toast('Invite code copied')).catch(()=>toast('Invite code: SW777-FRIEND'))}
 function openProfile(){$('profileModal').classList.add('open')}
 function closeProfile(){$('profileModal').classList.remove('open')}
-function saveProfile(){let n=$('username').value.trim()||'Guest123';document.querySelector('.userpill').innerHTML=n+' · <strong id="balanceTop">'+balance.toLocaleString()+' VC</strong>';closeProfile();toast('Profile saved')}
-function renderExtra(){let names=['Shadow777','LuckyPlayer','ProGamer','KingStar','NovaX'];let el=$('leaders');names.forEach((n,i)=>{let d=document.createElement('div');d.className='leader';d.innerHTML='<div class="rank">'+(i+1)+'</div><b>'+n+'</b><span class="score">'+(9850-i*731).toLocaleString()+' VC</span>';el.appendChild(d)});let nf=$('notifs');['New live round started','Daily bonus is available','Leaderboard updated','Server status: Online'].forEach((n,i)=>{let d=document.createElement('div');d.className='result';d.innerHTML='<span>'+['⚡','🎁','🏆','🟢'][i]+' '+n+'</span><small>'+i*2+1+'m ago</small>';nf.appendChild(d)})}
+async function saveProfile(){let n=$('username').value.trim()||'Guest123';try{const r=await fetch('/api/profile',{method:'PATCH',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:n})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Profile failed');document.querySelector('.userpill').innerHTML=d.profile.username+' · <strong id="balanceTop">'+balance.toLocaleString()+' VC</strong>';closeProfile();toast('Profile saved')}catch(e){toast(e.message)}}
+async function renderExtra(){try{const [l,n,m,a]=await Promise.all([fetch('/api/leaderboard').then(r=>r.json()),fetch('/api/notifications').then(r=>r.json()),fetch('/api/missions').then(r=>r.json()),fetch('/api/achievements').then(r=>r.json())]);const el=$('leaders');if(el){el.innerHTML='';(l.leaders||[]).forEach((x,i)=>{const d=document.createElement('div');d.className='leader';d.innerHTML='<div class="rank">'+(i+1)+'</div><b>'+x.username+'</b><span class="score">'+Number(x.score).toLocaleString()+' VC</span>';el.appendChild(d)})}const nf=$('notifs');if(nf){nf.innerHTML='';(n.notifications||[]).forEach(x=>{const d=document.createElement('div');d.className='result';d.innerHTML='<span>🔔 '+x.title+' — '+x.body+'</span><small>'+new Date(x.createdAt).toLocaleString()+'</small>';nf.appendChild(d)})}window.serverMissions=m.missions||[];window.serverAchievements=a.achievements||[]}catch{}}
 function tick(){let left=30-Math.floor((Date.now()-round)/1000)%30;$('timer').textContent='00:'+String(left).padStart(2,'0');$('roundId').textContent='SW'+new Date().toISOString().replace(/[-:TZ.]/g,'').slice(0,14)} 
 money();updateStats();renderExtra();
 async function boot(){
