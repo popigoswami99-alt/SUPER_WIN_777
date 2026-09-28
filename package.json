@@ -1,0 +1,8 @@
+{
+  "name":"super-win-777-free-play",
+  "version":"1.0.0",
+  "private":true,
+  "description":"24x7 free-play virtual-coin gaming platform",
+  "scripts":{"start":"node server.js"},
+  "engines":{"node":">=18"}
+}
