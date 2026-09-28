@@ -47,3 +47,17 @@ npm start
 Node.js 22+ is required. Set `ADMIN_TOKEN` in the server environment before using authenticated admin broadcast actions.
 
 The project remains strictly free-play: virtual coins have no cash value and deposit, withdrawal, payout, UPI, and bank-transfer functionality remain disabled.
+
+
+### Advanced platform work completed
+
+- Distinct presentation stages for all 8 free-play games.
+- Persistent virtual activity analytics endpoint and admin dashboard view.
+- Lightweight API rate limiting for abuse protection.
+- PWA install icon and improved metadata.
+- Server-side session, wallet, play, mission, notification, audit and realtime systems.
+- Automated backend architecture tests.
+
+### Deployment
+
+Use an always-on Node.js 22+ host with a persistent writable volume for `data/superwin.sqlite`. Configure `ADMIN_TOKEN` as a secret environment variable. Do not commit production secrets or the SQLite database file.
