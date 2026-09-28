@@ -1,13 +1,102 @@
 {
-  "entities":{
-    "users":{"fields":["id","username","email","passwordHash","avatar","xp","vipLevel","createdAt","lastLogin"]},
-    "wallets":{"fields":["userId","virtualCoins","lifetimeEarned","lifetimeSpent"]},
-    "rounds":{"fields":["id","game","startsAt","endsAt","result","status"]},
-    "plays":{"fields":["id","userId","roundId","game","selection","virtualStake","result","profit","createdAt"]},
-    "missions":{"fields":["id","title","target","progress","reward","active"]},
-    "achievements":{"fields":["id","title","description","xpReward","unlocked"]},
-    "notifications":{"fields":["id","userId","title","body","read","createdAt"]},
-    "auditLogs":{"fields":["id","actor","action","target","createdAt"]}
+  "entities": {
+    "users": {
+      "fields": [
+        "id",
+        "username",
+        "email",
+        "passwordHash",
+        "avatar",
+        "xp",
+        "vipLevel",
+        "createdAt",
+        "lastLogin"
+      ]
+    },
+    "wallets": {
+      "fields": [
+        "userId",
+        "virtualCoins",
+        "lifetimeEarned",
+        "lifetimeSpent"
+      ]
+    },
+    "rounds": {
+      "fields": [
+        "id",
+        "game",
+        "startsAt",
+        "endsAt",
+        "result",
+        "color",
+        "status"
+      ]
+    },
+    "plays": {
+      "fields": [
+        "id",
+        "userId",
+        "roundId",
+        "game",
+        "selection",
+        "virtualStake",
+        "result",
+        "profit",
+        "createdAt"
+      ]
+    },
+    "sessions": {
+      "fields": [
+        "token",
+        "userId",
+        "createdAt",
+        "expiresAt"
+      ]
+    },
+    "missions": {
+      "fields": [
+        "id",
+        "title",
+        "target",
+        "progress",
+        "reward",
+        "active"
+      ]
+    },
+    "achievements": {
+      "fields": [
+        "id",
+        "title",
+        "description",
+        "xpReward",
+        "unlocked"
+      ]
+    },
+    "notifications": {
+      "fields": [
+        "id",
+        "userId",
+        "title",
+        "body",
+        "read",
+        "createdAt"
+      ]
+    },
+    "auditLogs": {
+      "fields": [
+        "id",
+        "actor",
+        "action",
+        "target",
+        "createdAt"
+      ]
+    }
   },
-  "cashFeatures":{"deposit":false,"withdrawal":false,"payout":false,"upi":false,"bankTransfer":false}
+  "cashFeatures": {
+    "deposit": false,
+    "withdrawal": false,
+    "payout": false,
+    "upi": false,
+    "bankTransfer": false
+  }
 }
