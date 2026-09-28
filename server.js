@@ -75,6 +75,7 @@ let roundNo=Number(process.env.START_ROUND||1000);
 let roundEnds=Date.now()+30000;
 const history=[];
 const clients=new Set();
+const activeSessions=new Map();
 const rate=new Map();
 function limited(req,key,limit=30,windowMs=60000){const k=key||req.socket.remoteAddress||"unknown";const now=Date.now();const a=(rate.get(k)||[]).filter(t=>now-t<windowMs);a.push(now);rate.set(k,a);return a.length>limit;}
 
@@ -136,9 +137,11 @@ function sessionUser(req){
  if(!s)return null;
  return db.prepare("SELECT id,username,xp,vipLevel FROM users WHERE id=?").get(s.userId)||null;
 }
+function touchSession(userId){activeSessions.set(userId,Date.now())}
+function onlineCount(){const cutoff=Date.now()-90000;for(const [uid,t] of activeSessions)if(t<cutoff)activeSessions.delete(uid);return activeSessions.size}
 function ensureUser(req,res){
  let u=sessionUser(req);
- if(u)return u;
+ if(u){touchSession(u.id);return u;}
  const uid=id(), username="Guest"+String(Math.floor(1000+Math.random()*9000)), now=nowISO();
  db.prepare("INSERT INTO users(id,username,createdAt,lastLogin) VALUES(?,?,?,?)").run(uid,username,now,now);
  db.prepare("INSERT INTO wallets(userId) VALUES(?)").run(uid);
@@ -146,6 +149,7 @@ function ensureUser(req,res){
  const expires=new Date(Date.now()+30*24*3600*1000).toISOString();
  db.prepare("INSERT INTO sessions(token,userId,createdAt,expiresAt) VALUES(?,?,?,?)").run(token,uid,now,expires);
  res.setHeader("Set-Cookie",`sw_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${process.env.NODE_ENV==="production"?"; Secure":""}`);
+ touchSession(uid);
  return {id:uid,username,xp:0,vipLevel:1};
 }
 
@@ -160,7 +164,7 @@ const server=http.createServer(async(req,res)=>{
  try{
   const u=new URL(req.url,"http://localhost");
   if(limited(req,u.pathname,u.pathname==="/api/play"?20:120)) return json(res,{error:"Too many requests"},429);
-  if(u.pathname==="/api/health") return json(res,{online:true,mode:"free-play",cash:false,deposit:false,withdrawal:false,payout:false,upi:false,bankTransfer:false,database:true,realtime:true,uptime:Math.floor(process.uptime()),memory:process.memoryUsage().rss,activeRealtimeClients:clients.size});
+  if(u.pathname==="/api/health") return json(res,{online:true,mode:"free-play",cash:false,deposit:false,withdrawal:false,payout:false,upi:false,bankTransfer:false,database:true,realtime:true,uptime:Math.floor(process.uptime()),memory:process.memoryUsage().rss,activeRealtimeClients:clients.size,activeSessions:onlineCount()});
   if(u.pathname==="/api/profile" && req.method==="GET"){
    const user=sessionUser(req); if(!user)return json(res,{error:"Session required"},401);
    return json(res,{profile:db.prepare("SELECT id,username,email,avatar,xp,vipLevel,createdAt,lastLogin FROM users WHERE id=?").get(user.id)});
@@ -245,7 +249,7 @@ const server=http.createServer(async(req,res)=>{
    }catch(e){db.exec("ROLLBACK");throw e}
    return json(res,{ok:true,play:{id:pid,game,selection,result:win?"win":"loss",profit,outcome:outcome.value},wallet:{virtualCoins:newBalance}});
   }
-  if(u.pathname==="/api/metrics"){return json(res,{uptime:process.uptime(),memory:process.memoryUsage(),realtimeClients:clients.size,users:db.prepare("SELECT COUNT(*) c FROM users").get().c,plays:db.prepare("SELECT COUNT(*) c FROM plays").get().c,rounds:db.prepare("SELECT COUNT(*) c FROM rounds").get().c,mode:"free-play"});}
+  if(u.pathname==="/api/metrics"){return json(res,{uptime:process.uptime(),memory:process.memoryUsage(),realtimeClients:clients.size,activeSessions:onlineCount(),users:db.prepare("SELECT COUNT(*) c FROM users").get().c,plays:db.prepare("SELECT COUNT(*) c FROM plays").get().c,rounds:db.prepare("SELECT COUNT(*) c FROM rounds").get().c,mode:"free-play"});}
   if(u.pathname==="/api/analytics"){
    const plays=db.prepare("SELECT COUNT(*) c, COALESCE(SUM(virtualStake),0) stake, COALESCE(SUM(profit),0) profit, SUM(CASE WHEN result='win' THEN 1 ELSE 0 END) wins FROM plays").get();
    const games=db.prepare("SELECT game,COUNT(*) plays,COALESCE(SUM(profit),0) profit FROM plays GROUP BY game ORDER BY plays DESC").all();
