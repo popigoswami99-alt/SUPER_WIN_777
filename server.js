@@ -175,6 +175,16 @@ const server=http.createServer(async(req,res)=>{
    const user=sessionUser(req);if(!user)return json(res,{plays:[]});
    return json(res,{plays:db.prepare("SELECT game,selection,virtualStake,result,profit,createdAt FROM plays WHERE userId=? ORDER BY createdAt DESC LIMIT 50").all(user.id)});
   }
+  if(u.pathname==="/api/admin/notify" && req.method==="POST"){
+   const token=req.headers["x-admin-token"];
+   if(!process.env.ADMIN_TOKEN || token!==process.env.ADMIN_TOKEN)return json(res,{error:"Admin authentication required"},401);
+   const p=await body(req), title=String(p.title||"SUPER WIN 777"), bodyText=String(p.body||"");
+   if(!bodyText||bodyText.length>500)return json(res,{error:"Invalid notification"},400);
+   db.prepare("INSERT INTO notifications(id,userId,title,body,createdAt) VALUES(?,?,?,?,?)").run(id(),null,title,bodyText,nowISO());
+   broadcast({type:"notification",title,body:bodyText});
+   db.prepare("INSERT INTO auditLogs(id,actor,action,target,createdAt) VALUES(?,?,?,?,?)").run(id(),"admin","broadcast_notification",title,nowISO());
+   return json(res,{ok:true});
+  }
   if(u.pathname==="/api/notifications"){
    const user=sessionUser(req);if(!user)return json(res,{notifications:[]});
    return json(res,{notifications:db.prepare("SELECT title,body,read,createdAt FROM notifications WHERE userId=? OR userId IS NULL ORDER BY createdAt DESC LIMIT 30").all(user.id)});
