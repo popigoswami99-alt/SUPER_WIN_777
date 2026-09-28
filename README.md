@@ -24,8 +24,8 @@ SUPER WIN 777 is a mobile-first 24x7 free-play virtual-coin gaming platform.
 - manifest.webmanifest + sw.js — PWA support
 
 ## Run locally
-Requires Node.js 18+.
-Run: node server.js
+Requires Node.js 22+.
+Run: npm start
 Then open http://localhost:3000.
 
 For public 24x7 uptime, deploy the server to an always-on host and add a persistent database and authenticated user system.
