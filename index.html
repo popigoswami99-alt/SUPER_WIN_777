@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#06101f">
+<meta name="theme-color" content="#06101f"><link rel="manifest" href="/manifest.webmanifest">
 <title>SUPER WIN 777 — Free Play Gaming</title>
 <style>
 :root{--bg:#030913;--panel:#071528;--panel2:#0b1d32;--line:#17304b;--text:#f4f8ff;--muted:#8da2bb;--gold:#ffd447;--green:#15e39a;--red:#ff4d6d;--violet:#8b5cf6;--blue:#31a7ff}
@@ -85,6 +85,7 @@ function saveProfile(){let n=$('username').value.trim()||'Guest123';document.que
 function renderExtra(){let names=['Shadow777','LuckyPlayer','ProGamer','KingStar','NovaX'];let el=$('leaders');names.forEach((n,i)=>{let d=document.createElement('div');d.className='leader';d.innerHTML='<div class="rank">'+(i+1)+'</div><b>'+n+'</b><span class="score">'+(9850-i*731).toLocaleString()+' VC</span>';el.appendChild(d)});let nf=$('notifs');['New live round started','Daily bonus is available','Leaderboard updated','Server status: Online'].forEach((n,i)=>{let d=document.createElement('div');d.className='result';d.innerHTML='<span>'+['⚡','🎁','🏆','🟢'][i]+' '+n+'</span><small>'+i*2+1+'m ago</small>';nf.appendChild(d)})}
 function tick(){let left=30-Math.floor((Date.now()-round)/1000)%30;$('timer').textContent='00:'+String(left).padStart(2,'0');$('roundId').textContent='SW'+new Date().toISOString().replace(/[-:TZ.]/g,'').slice(0,14);if(left===30){let n=Math.floor(Math.random()*10);$('balls').innerHTML='<div class="ball '+(n%2?'red':'green')+'">'+n+'</div>';let row=document.createElement('div');row.className='result';row.innerHTML='<span>Round '+n+Date.now().toString().slice(-4)+'</span><b>'+n+'</b>'; $('gameResults').prepend(row);$('latest').prepend(row.cloneNode(true));while($('gameResults').children.length>10)$('gameResults').lastChild.remove();while($('latest').children.length>8)$('latest').lastChild.remove()}} 
 money();updateStats();renderExtra();for(let i=0;i<5;i++){let row=document.createElement('div');row.className='result';row.innerHTML='<span>Win Go • '+(1200+i)+'</span><b>'+(Math.floor(Math.random()*10))+'</b>';$('latest').append(row.cloneNode(true));$('gameResults').append(row)}setInterval(tick,250);tick();
+async function syncServer(){try{let s=await fetch('/api/state').then(r=>r.json());let chip=document.querySelector('.livechip');if(chip)chip.innerHTML='<i></i>Server '+(s.server==='online'?'Online':'Offline');let pc=document.getElementById('onlineCount');if(pc)pc.textContent=s.onlinePlayers.toLocaleString();}catch(e){}}syncServer();setInterval(syncServer,3000);if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 </script>
 </body>
 </html>
