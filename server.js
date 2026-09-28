@@ -140,11 +140,17 @@ const server=http.createServer(async(req,res)=>{
   }
   if(u.pathname==="/api/results") return json(res,{results:history.length?history:db.prepare("SELECT id AS round,result,color,createdAt AS time FROM rounds WHERE status='closed' ORDER BY endsAt DESC LIMIT 30").all()});
   if(u.pathname==="/api/leaderboard") return json(res,{leaders:leaderboard()});
-  if(u.pathname==="/api/missions") return json(res,{missions:[
-   {id:"daily",title:"Daily Player",text:"Play 3 free rounds",reward:250,progress:0,target:3},
-   {id:"streak",title:"Hot Streak",text:"Win 2 rounds",reward:300,progress:0,target:2},
-   {id:"explorer",title:"Game Explorer",text:"Open 4 games",reward:400,progress:0,target:4}
-  ]});
+  if(u.pathname==="/api/missions"){
+   const user=sessionUser(req);
+   const plays=user?db.prepare("SELECT result,game FROM plays WHERE userId=? AND date(createdAt)>=date('now','localtime')").all(user.id):[];
+   const wins=plays.filter(x=>x.result==="win").length;
+   const games=new Set(plays.map(x=>x.game)).size;
+   return json(res,{missions:[
+    {id:"daily",title:"Daily Player",text:"Play 3 free rounds",reward:250,progress:Math.min(plays.length,3),target:3},
+    {id:"streak",title:"Hot Streak",text:"Win 2 rounds",reward:300,progress:Math.min(wins,2),target:2},
+    {id:"explorer",title:"Game Explorer",text:"Play 4 games",reward:400,progress:Math.min(games,4),target:4}
+   ]});
+  }
   if(u.pathname==="/api/live"){
    res.writeHead(200,{"Content-Type":"text/event-stream","Cache-Control":"no-cache","Connection":"keep-alive","Access-Control-Allow-Origin":"*"});
    res.write(`data: ${JSON.stringify({type:"connected",id:"SW"+roundNo,secondsLeft:Math.max(0,Math.ceil((roundEnds-Date.now())/1000))})}\\n\\n`);
