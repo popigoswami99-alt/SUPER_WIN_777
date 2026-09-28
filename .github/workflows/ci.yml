@@ -13,3 +13,10 @@ jobs:
           node-version: 22
       - run: npm run check
       - run: npm test
+      - name: Smoke test server
+        run: |
+          node server.js > /tmp/super-win-777.log 2>&1 &
+          pid=$!
+          trap 'kill $pid 2>/dev/null || true' EXIT
+          sleep 2
+          node -e "fetch('http://127.0.0.1:3000/api/health').then(async r=>{const d=await r.json();if(!r.ok||d.online!==true||d.mode!=='free-play'||d.cashEnabled!==false)process.exit(1)}).catch(()=>process.exit(1))"
