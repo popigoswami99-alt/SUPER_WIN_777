@@ -57,7 +57,7 @@
 
 <section id="history" class="panel"><div class="sectionHead"><h2>Game History</h2><span>Local demo</span></div><div class="card"><table class="history"><thead><tr><th>Time</th><th>Game</th><th>Stake</th><th>Result</th><th>P/L</th></tr></thead><tbody id="historyRows"></tbody></table></div></section>
 
-<section id="rewards" class="panel"><div class="sectionHead"><h2>🎁 Rewards Center</h2><span>Virtual only</span></div><div class="featuregrid"><div class="feature">⭐ <b>VIP Level 1</b><small>Progress 0 / 5,000 XP</small></div><div class="feature">🔥 <b>Daily Streak</b><small>1 day • Keep playing</small></div><div class="feature">🏅 <b>First Win</b><small>Achievement locked</small></div><div class="feature">🎮 <b>Explorer</b><small>Open 4 different games</small></div><div class="feature">🏆 <b>High Roller</b><small>Virtual stake milestone</small></div><div class="feature">🎁 <b>Daily Bonus</b><small>+250 VC available</small></div></div><div class="sectionHead"><h2>Daily Missions</h2><span>Claim virtual rewards</span></div><div class="card"><div class="result"><span>🎯 Play 3 free rounds</span><b>0 / 3 · +250 VC</b></div><div class="result"><span>🔥 Win 2 rounds</span><b>0 / 2 · +300 VC</b></div><div class="result"><span>🧭 Explore 4 games</span><b>0 / 4 · +400 VC</b></div></div></section>
+<section id="rewards" class="panel"><div class="sectionHead"><h2>🎁 Rewards Center</h2><span>Virtual only</span></div><div class="featuregrid"><div class="feature">⭐ <b>VIP Level 1</b><small>Progress 0 / 5,000 XP</small></div><div class="feature">🔥 <b>Daily Streak</b><small>1 day • Keep playing</small></div><div class="feature">🏅 <b>First Win</b><small>Achievement locked</small></div><div class="feature">🎮 <b>Explorer</b><small>Open 4 different games</small></div><div class="feature">🏆 <b>High Roller</b><small>Virtual stake milestone</small></div><div class="feature">🎁 <b>Daily Bonus</b><small>+250 VC available</small></div></div><div class="sectionHead"><h2>Daily Missions</h2><span>Claim virtual rewards</span></div><div class="card" id="missionsList"><div class="result"><span>🎯 Play 3 free rounds</span><b>0 / 3 · +250 VC</b></div><div class="result"><span>🔥 Win 2 rounds</span><b>0 / 2 · +300 VC</b></div><div class="result"><span>🧭 Explore 4 games</span><b>0 / 4 · +400 VC</b></div></div></section>
 
 <section id="leaderboard" class="panel"><div class="sectionHead"><h2>🏆 Leaderboard</h2><span>Virtual coins</span></div><div class="card" id="leaders"></div><div class="card" style="margin-top:10px"><b>🎁 Referral Rewards</b><p style="color:#8da2bb">Invite friends to earn non-cash virtual coins.</p><button class="cta" style="border:0" onclick="copyReferral()">Copy Invite Code</button></div></section>
 
@@ -112,13 +112,13 @@ async function placeBet(){
  try{
   const r=await fetch('/api/play',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({selection:selected,virtualStake:stake,game:currentGame})}).then(async x=>{const d=await x.json();if(!x.ok)throw new Error(d.error||'Play failed');return d});
   balance=r.wallet.virtualCoins;totalBets++;if(r.play.result==='win')totalWins++;
-  addHistory(stake,r.play.profit,selected);money();updateStats();
+  addHistory(currentGame,stake,r.play.profit,selected);money();updateStats();
   toast(r.play.result==='win'?'🎉 Virtual win +'+r.play.profit+' VC':'Round complete — virtual loss '+Math.abs(r.play.profit)+' VC');
   selected=null;document.querySelectorAll('.choice,.ball').forEach(x=>x.classList.remove('selected'));
  }catch(e){toast(e.message)}
 }
 function updateStats(){$('totalBets').textContent=totalBets;$('totalWins').textContent=totalWins;$('winRate').textContent=totalBets?Math.round(totalWins/totalBets*100)+'%':'0%'}
-function addHistory(s,p,r){let tr=document.createElement('tr');tr.innerHTML='<td>'+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</td><td>Win Go</td><td>'+s+' VC</td><td>'+r+'</td><td style="color:'+(p>=0?'#15e39a':'#ff4d6d')+'">'+(p>=0?'+':'')+p+' VC</td>';$('historyRows').prepend(tr);while($('historyRows').children.length>12)$('historyRows').lastChild.remove()}
+function addHistory(g,s,p,r){let tr=document.createElement('tr');tr.innerHTML='<td>'+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</td><td>'+String(g||'Win Go')+'</td><td>'+s+' VC</td><td>'+r+'</td><td style="color:'+(p>=0?'#15e39a':'#ff4d6d')+'">'+(p>=0?'+':'')+p+' VC</td>';$('historyRows').prepend(tr);while($('historyRows').children.length>12)$('historyRows').lastChild.remove()}
 async function copyReferral(){try{const d=await fetch('/api/referral').then(r=>r.json());const code=d.code||'SW777-FRIEND';navigator.clipboard?.writeText(code);toast('Invite code: '+code)}catch{toast('Referral unavailable')}}
 function openProfile(){$('profileModal').classList.add('open')}
 function closeProfile(){$('profileModal').classList.remove('open')}
@@ -133,7 +133,7 @@ async function boot(){
   document.querySelector('.userpill').innerHTML=s.user.username+' · <strong id="balanceTop">'+balance.toLocaleString()+' VC</strong>';
   const h=await fetch('/api/history',{credentials:'same-origin'}).then(r=>r.json());
   totalBets=h.plays.length;totalWins=h.plays.filter(x=>x.result==='win').length;updateStats();
-  h.plays.slice().reverse().forEach(x=>addHistory(x.virtualStake,x.profit,x.selection));
+  h.plays.slice().reverse().forEach(x=>addHistory(x.game,x.virtualStake,x.profit,x.selection));
  }catch(e){}
 }
 async function syncServer(){try{let s=await fetch('/api/state').then(r=>r.json());let chip=document.querySelector('.livechip');if(chip)chip.innerHTML='<i></i>Server '+(s.server==='online'?'Online':'Offline');let pc=document.getElementById('onlineCount');if(pc)pc.textContent=s.onlinePlayers.toLocaleString();}catch(e){}}
@@ -155,5 +155,9 @@ async function syncExtra(){
  }catch{}
 }
 syncExtra();setInterval(syncExtra,15000);
+</script><script>
+function renderMissions(items){const box=document.getElementById("missionsList");if(!box)return;box.innerHTML="";(items||[]).forEach(x=>{const d=document.createElement("div");d.className="result";d.innerHTML="<span>🎯 "+x.text+"</span><b>"+x.progress+" / "+x.target+" · +"+x.reward+" VC</b>";box.appendChild(d)})}
+const _syncExtra=window.syncExtra;window.syncExtra=async function(){await _syncExtra?.();if(window.serverExtras)renderMissions(window.serverExtras.missions)};
+if(typeof live!=="undefined"){live.addEventListener("open",()=>syncServer());live.addEventListener("error",()=>{setTimeout(()=>{if(live.readyState===EventSource.CLOSED){location.reload()}},5000)})}
 </script></body>
 </html>
