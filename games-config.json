@@ -1,0 +1,12 @@
+{
+  "games":[
+    {"id":"win-go","name":"Win Go","category":"Lottery","mode":"free-play","roundSeconds":30,"animation":"number"},
+    {"id":"k3","name":"K3 Lottery","category":"Lottery","mode":"free-play","roundSeconds":60,"animation":"dice"},
+    {"id":"5d","name":"5D Lottery","category":"Lottery","mode":"free-play","roundSeconds":60,"animation":"digits"},
+    {"id":"parity","name":"Fast Parity","category":"Original","mode":"free-play","roundSeconds":30,"animation":"color"},
+    {"id":"slots","name":"Slots","category":"Casino","mode":"free-play","roundSeconds":0,"animation":"reels"},
+    {"id":"crash","name":"Crash","category":"Original","mode":"free-play","roundSeconds":0,"animation":"multiplier"},
+    {"id":"cards","name":"Card Room","category":"Cards","mode":"free-play","roundSeconds":0,"animation":"cards"},
+    {"id":"sports","name":"Sports","category":"Sports","mode":"free-play","roundSeconds":0,"animation":"match"}
+  ]
+}
