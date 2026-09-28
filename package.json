@@ -5,7 +5,8 @@
   "description": "24x7 free-play virtual-coin gaming platform",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "check": "node --check server.js && node --check test/server.test.js"
   },
   "engines": {
     "node": ">=22"
