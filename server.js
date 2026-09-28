@@ -60,15 +60,15 @@ for(const sql of [
 const nowISO=()=>new Date().toISOString();
 const id=()=>crypto.randomUUID();
 const colorFor=n=>n===0||n===5?"violet":n%2?"red":"green";
-const gameResult=(game,selection)=>{
+const gameResult=(game,selection)=>{ const pick=String(selection).toLowerCase();
  const n=crypto.randomInt(10);
- if(game==="Win Go"||game==="Fast Parity") return {value:n,color:colorFor(n),win:selection===String(n)||selection===colorFor(n)};
- if(game==="K3 Lottery"){const d=[crypto.randomInt(1,7),crypto.randomInt(1,7),crypto.randomInt(1,7)],sum=d.reduce((a,b)=>a+b,0);return {value:d.join("-"),color:"dice",win:selection==="sum:"+sum||selection==="triple"&&d[0]===d[1]&&d[1]===d[2]};}
- if(game==="5D Lottery"){const digits=Array.from({length:5},()=>crypto.randomInt(10)).join("");return {value:digits,color:"digits",win:selection===digits||selection==="lucky"&&digits.includes("7")};}
- if(game==="Slots"){const symbols=["🍒","⭐","7️⃣","💎"],r=Array.from({length:3},()=>symbols[crypto.randomInt(symbols.length)]);return {value:r.join(" "),color:"reels",win:r.every(x=>x===r[0])||selection==="lucky"&&r.includes("7️⃣")};}
- if(game==="Crash"){const mult=(1+crypto.randomInt(400)/100).toFixed(2);return {value:mult+"x",color:"multiplier",win:selection==="under2"&&Number(mult)<2||selection==="under3"&&Number(mult)<3};}
- if(game==="Card Room"){const suits=["♠","♥","♦","♣"],r=suits[crypto.randomInt(4)]+["A","7","K","Q","10"][crypto.randomInt(5)];return {value:r,color:"cards",win:selection==="red"&&["♥","♦"].includes(r[0])||selection==="black"&&["♠","♣"].includes(r[0])};}
- if(game==="Sports"){const a=crypto.randomInt(5),b=crypto.randomInt(5);return {value:a+":"+b,color:"match",win:selection==="home"&&a>b||selection==="away"&&b>a||selection==="draw"&&a===b};}
+ if(game==="Win Go"||game==="Fast Parity") return {value:n,color:colorFor(n),win:pick===String(n)||pick===colorFor(n)};
+ if(game==="K3 Lottery"){const d=[crypto.randomInt(1,7),crypto.randomInt(1,7),crypto.randomInt(1,7)],sum=d.reduce((a,b)=>a+b,0);return {value:d.join("-"),color:"dice",win:pick==="sum:"+sum||pick==="triple"&&d[0]===d[1]&&d[1]===d[2]};}
+ if(game==="5D Lottery"){const digits=Array.from({length:5},()=>crypto.randomInt(10)).join("");return {value:digits,color:"digits",win:pick===digits||pick==="lucky"&&digits.includes("7")};}
+ if(game==="Slots"){const symbols=["🍒","⭐","7️⃣","💎"],r=Array.from({length:3},()=>symbols[crypto.randomInt(symbols.length)]);return {value:r.join(" "),color:"reels",win:r.every(x=>x===r[0])||pick==="lucky"&&r.includes("7️⃣")};}
+ if(game==="Crash"){const mult=(1+crypto.randomInt(400)/100).toFixed(2);return {value:mult+"x",color:"multiplier",win:pick==="under2"&&Number(mult)<2||pick==="under3"&&Number(mult)<3};}
+ if(game==="Card Room"){const suits=["♠","♥","♦","♣"],r=suits[crypto.randomInt(4)]+["A","7","K","Q","10"][crypto.randomInt(5)];return {value:r,color:"cards",win:pick==="red"&&["♥","♦"].includes(r[0])||pick==="black"&&["♠","♣"].includes(r[0])};}
+ if(game==="Sports"){const a=crypto.randomInt(5),b=crypto.randomInt(5);return {value:a+":"+b,color:"match",win:pick==="home"&&a>b||pick==="away"&&b>a||pick==="draw"&&a===b};}
  return {value:n,color:colorFor(n),win:false};
 };
 let roundNo=Number(process.env.START_ROUND||1000);
