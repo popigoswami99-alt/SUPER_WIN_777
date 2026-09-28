@@ -12,8 +12,9 @@ const db=new DatabaseSync(DB_FILE);
 db.exec(`
 PRAGMA journal_mode=WAL;
 CREATE TABLE IF NOT EXISTS users(
- id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, xp INTEGER NOT NULL DEFAULT 0,
- vipLevel INTEGER NOT NULL DEFAULT 1, createdAt TEXT NOT NULL, lastLogin TEXT NOT NULL
+ id TEXT PRIMARY KEY, username TEXT UNIQUE NOT NULL, email TEXT, avatar TEXT,
+ xp INTEGER NOT NULL DEFAULT 0, vipLevel INTEGER NOT NULL DEFAULT 1,
+ createdAt TEXT NOT NULL, lastLogin TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS wallets(
  userId TEXT PRIMARY KEY, virtualCoins INTEGER NOT NULL DEFAULT 1250,
@@ -37,6 +38,15 @@ CREATE TABLE IF NOT EXISTS sessions(
 CREATE TABLE IF NOT EXISTS notifications(
  id TEXT PRIMARY KEY, userId TEXT, title TEXT NOT NULL, body TEXT NOT NULL,
  read INTEGER NOT NULL DEFAULT 0, createdAt TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS referrals(
+ id TEXT PRIMARY KEY, referrerId TEXT NOT NULL, referredId TEXT NOT NULL UNIQUE,
+ code TEXT NOT NULL, createdAt TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS achievements(
+ id TEXT PRIMARY KEY, userId TEXT NOT NULL, title TEXT NOT NULL,
+ description TEXT NOT NULL, xpReward INTEGER NOT NULL DEFAULT 0,
+ unlocked INTEGER NOT NULL DEFAULT 0, unlockedAt TEXT
 );
 CREATE TABLE IF NOT EXISTS auditLogs(
  id TEXT PRIMARY KEY, actor TEXT NOT NULL, action TEXT NOT NULL, target TEXT NOT NULL, createdAt TEXT NOT NULL
@@ -123,6 +133,8 @@ function ensureUser(req,res){
  return {id:uid,username,xp:0,vipLevel:1};
 }
 
+const gamesAllow=new Set(["Win Go","K3 Lottery","5D Lottery","Fast Parity","Slots","Crash","Card Room","Sports"]);
+const vipForXp=xp=>Math.min(10,1+Math.floor(Math.max(0,xp)/1000));
 const leaderboard=()=>db.prepare(`
  SELECT u.username, w.virtualCoins AS score FROM users u JOIN wallets w ON w.userId=u.id
  ORDER BY w.virtualCoins DESC LIMIT 20
@@ -133,6 +145,36 @@ const server=http.createServer(async(req,res)=>{
   const u=new URL(req.url,"http://localhost");
   if(limited(req,u.pathname,u.pathname==="/api/play"?20:120)) return json(res,{error:"Too many requests"},429);
   if(u.pathname==="/api/health") return json(res,{online:true,mode:"free-play",cash:false,deposit:false,withdrawal:false,payout:false,upi:false,bankTransfer:false,database:true,realtime:true});
+  if(u.pathname==="/api/profile" && req.method==="GET"){
+   const user=sessionUser(req); if(!user)return json(res,{error:"Session required"},401);
+   return json(res,{profile:db.prepare("SELECT id,username,email,avatar,xp,vipLevel,createdAt,lastLogin FROM users WHERE id=?").get(user.id)});
+  }
+  if(u.pathname==="/api/profile" && req.method==="PATCH"){
+   const user=ensureUser(req,res), p=await body(req);
+   const username=String(p.username||"").trim();
+   const avatar=String(p.avatar||"").slice(0,200);
+   if(username && !/^[A-Za-z0-9_ ]{3,20}$/.test(username)) return json(res,{error:"Invalid username"},400);
+   if(username) db.prepare("UPDATE users SET username=?,lastLogin=? WHERE id=?").run(username,nowISO(),user.id);
+   if("avatar" in p) db.prepare("UPDATE users SET avatar=? WHERE id=?").run(avatar,user.id);
+   return json(res,{ok:true,profile:db.prepare("SELECT id,username,email,avatar,xp,vipLevel FROM users WHERE id=?").get(user.id)});
+  }
+  if(u.pathname==="/api/referral" && req.method==="GET"){
+   const user=sessionUser(req); if(!user)return json(res,{error:"Session required"},401);
+   const code="SW"+user.id.replaceAll("-","").slice(0,8).toUpperCase();
+   const count=db.prepare("SELECT COUNT(*) c FROM referrals WHERE referrerId=?").get(user.id).c;
+   return json(res,{code,referrals:count,reward:"Virtual XP only"});
+  }
+  if(u.pathname==="/api/achievements" && req.method==="GET"){
+   const user=sessionUser(req); if(!user)return json(res,{achievements:[]});
+   const plays=db.prepare("SELECT COUNT(*) c FROM plays WHERE userId=?").get(user.id).c;
+   const wins=db.prepare("SELECT COUNT(*) c FROM plays WHERE userId=? AND result='win'").get(user.id).c;
+   const defs=[["first-play","First Play","Complete your first free-play round",100,plays>=1],["first-win","First Win","Win a virtual round",150,wins>=1],["veteran","Veteran","Complete 10 free-play rounds",300,plays>=10]];
+   for(const [aid,title,desc,xp,ok] of defs){
+    db.prepare("INSERT OR IGNORE INTO achievements(id,userId,title,description,xpReward,unlocked) VALUES(?,?,?,?,?,0)").run(aid+"-"+user.id,user.id,title,desc,xp);
+    if(ok) db.prepare("UPDATE achievements SET unlocked=1,unlockedAt=COALESCE(unlockedAt,?) WHERE id=?").run(nowISO(),aid+"-"+user.id);
+   }
+   return json(res,{achievements:db.prepare("SELECT title,description,xpReward,unlocked,unlockedAt FROM achievements WHERE userId=? ORDER BY unlocked DESC,title").all(user.id)});
+  }
   if(u.pathname==="/api/session" && req.method==="GET"){
    const user=ensureUser(req,res);
    const wallet=db.prepare("SELECT virtualCoins,lifetimeEarned,lifetimeSpent FROM wallets WHERE userId=?").get(user.id);
@@ -161,9 +203,10 @@ const server=http.createServer(async(req,res)=>{
   }
   if(u.pathname==="/api/play" && req.method==="POST"){
    const user=ensureUser(req,res);const p=await body(req);
-   const stake=Number(p.virtualStake), selection=String(p.selection||"");
+   const stake=Number(p.virtualStake), selection=String(p.selection||""), game=String(p.game||"Win Go");
    if(!Number.isInteger(stake)||![10,50,100].includes(stake))return json(res,{error:"Invalid virtual stake"},400);
    if(!selection||selection.length>40)return json(res,{error:"Invalid selection"},400);
+   if(!gamesAllow.has(game))return json(res,{error:"Unsupported game"},400);
    const wallet=db.prepare("SELECT virtualCoins FROM wallets WHERE userId=?").get(user.id);
    if(!wallet||wallet.virtualCoins<stake)return json(res,{error:"Not enough virtual coins",balance:wallet?.virtualCoins||0},400);
    const win=crypto.randomInt(100)<48, profit=win?stake:-stake;
@@ -174,7 +217,7 @@ const server=http.createServer(async(req,res)=>{
     db.prepare("UPDATE wallets SET virtualCoins=?,lifetimeSpent=lifetimeSpent+?,lifetimeEarned=lifetimeEarned+? WHERE userId=?")
       .run(newBalance,stake,win?stake:0,user.id);
     db.prepare("INSERT INTO plays(id,userId,roundId,game,selection,virtualStake,result,profit,createdAt) VALUES(?,?,?,?,?,?,?,?,?)")
-      .run(pid,user.id,"SW"+roundNo,"Win Go",selection,stake,win?"win":"loss",profit,nowISO());
+      .run(pid,user.id,"SW"+roundNo,game,selection,stake,win?"win":"loss",profit,nowISO());
     db.prepare("INSERT INTO auditLogs(id,actor,action,target,createdAt) VALUES(?,?,?,?,?)").run(id(),user.id,"virtual_play",pid,nowISO());
     db.exec("COMMIT");
    }catch(e){db.exec("ROLLBACK");throw e}
