@@ -32,5 +32,5 @@ test("server supports multi-game free-play and safety controls",()=>{
  assert.match(source,/gameResult/);
  assert.match(source,/X-Content-Type-Options/);
  assert.match(source,/SIGTERM/);
- assert.match(source,/api\/metrics/);
+ assert.match(source,/api\/metrics/);\n assert.match(source,/activeSessions/);\n assert.match(source,/onlineCount/);
 });
