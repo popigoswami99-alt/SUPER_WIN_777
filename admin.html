@@ -8,9 +8,10 @@
 <div class="card"><b>Current Round</b><h2 id="round">—</h2><span class="muted" id="timer">—</span></div>
 <div class="card"><b>Online Players</b><h2 id="players">—</h2><span class="muted">Persistent registered sessions</span></div></div>
 <h2>Authenticated Admin Broadcast</h2><div class="card"><input id="token" type="password" placeholder="ADMIN_TOKEN"><input id="title" value="SUPER WIN 777"><textarea id="body" placeholder="Notification message"></textarea><button onclick="broadcast()">Broadcast Notification</button><p id="msg" class="muted"></p></div>
-<p class="muted">Set ADMIN_TOKEN on the server before using admin actions. Never commit the token to GitHub.</p></div>
+<h2>Audit Log</h2><div class="card"><button onclick="audit()">Load Recent Audit Events</button><pre id="auditLog" class="muted">—</pre></div><p class="muted">Set ADMIN_TOKEN on the server before using admin actions. Never commit the token to GitHub.</p></div>
 <script>
 async function load(){try{const [s,h]=await Promise.all([fetch("/api/state").then(r=>r.json()),fetch("/api/health").then(r=>r.json())]);server.textContent="ONLINE";health.textContent=h.database?"SQLite + SSE realtime":"Backend ready";round.textContent=s.round.id;timer.textContent=s.round.secondsLeft+" sec";players.textContent=s.onlinePlayers.toLocaleString()}catch{server.textContent="OFFLINE";}}
 async function broadcast(){const msg=document.getElementById("msg");try{const r=await fetch("/api/admin/notify",{method:"POST",headers:{"Content-Type":"application/json","x-admin-token":token.value},body:JSON.stringify({title:title.value,body:body.value})});const d=await r.json();msg.textContent=r.ok?"✓ Notification broadcast":"✕ "+(d.error||"Failed");}catch{msg.textContent="✕ Request failed"}}
+async function audit(){try{const d=await fetch("/api/admin/audit",{headers:{"x-admin-token":token.value}}).then(r=>r.json());auditLog.textContent=JSON.stringify(d,null,2)}catch{auditLog.textContent="Audit unavailable"}}
 async function analytics(){try{const d=await fetch("/api/analytics").then(r=>r.json());stats.textContent=JSON.stringify(d,null,2)}catch{stats.textContent="Analytics unavailable"}}load();setInterval(load,1000);
 </script></body></html>
