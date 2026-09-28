@@ -53,6 +53,10 @@ CREATE TABLE IF NOT EXISTS auditLogs(
 );
 `);
 
+for(const sql of [
+ "ALTER TABLE users ADD COLUMN email TEXT",
+ "ALTER TABLE users ADD COLUMN avatar TEXT"
+]){try{db.exec(sql)}catch{}}
 const nowISO=()=>new Date().toISOString();
 const id=()=>crypto.randomUUID();
 const colorFor=n=>n===0||n===5?"violet":n%2?"red":"green";
