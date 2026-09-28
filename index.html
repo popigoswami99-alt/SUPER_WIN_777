@@ -159,5 +159,6 @@ syncExtra();setInterval(syncExtra,15000);
 function renderMissions(items){const box=document.getElementById("missionsList");if(!box)return;box.innerHTML="";(items||[]).forEach(x=>{const d=document.createElement("div");d.className="result";d.innerHTML="<span>🎯 "+x.text+"</span><b>"+x.progress+" / "+x.target+" · +"+x.reward+" VC</b>";box.appendChild(d)})}
 const _syncExtra=window.syncExtra;window.syncExtra=async function(){await _syncExtra?.();if(window.serverExtras)renderMissions(window.serverExtras.missions)};
 if(typeof live!=="undefined"){live.addEventListener("open",()=>syncServer());live.addEventListener("error",()=>{setTimeout(()=>{if(live.readyState===EventSource.CLOSED){location.reload()}},5000)})}
+fetch("/api/missions").then(r=>r.json()).then(d=>renderMissions(d.missions||[])).catch(()=>{});setInterval(()=>fetch("/api/missions").then(r=>r.json()).then(d=>renderMissions(d.missions||[])).catch(()=>{}),15000);
 </script></body>
 </html>
