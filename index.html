@@ -77,7 +77,16 @@ function show(id,btn){document.querySelectorAll('.panel').forEach(x=>x.classList
 function openGame(name){$('gameTitle').textContent=name;show('play');toast(name+' opened — virtual coins only');}
 function setStake(n){stake=n;toast('Stake set to '+n+' VC')}
 function pick(el,val){document.querySelectorAll('.choice,.ball').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');selected=val}
-function placeBet(){if(!selected){toast('Choose a result first');return}if(balance<stake){toast('Not enough virtual coins');return}balance-=stake;totalBets++;let win=Math.random()<.48;let pl=win?stake*2:0;if(win){balance+=pl;totalWins++}addHistory(stake,win?pl-stake:-stake,selected);money();updateStats();toast(win?'🎉 Virtual win +'+(pl-stake)+' VC':'Round complete — better luck next time');selected=null;document.querySelectorAll('.choice,.ball').forEach(x=>x.classList.remove('selected'))}
+async function placeBet(){
+ if(!selected){toast('Choose a result first');return}
+ try{
+  const r=await fetch('/api/play',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({selection:selected,virtualStake:stake})}).then(async x=>{const d=await x.json();if(!x.ok)throw new Error(d.error||'Play failed');return d});
+  balance=r.wallet.virtualCoins;totalBets++;if(r.play.result==='win')totalWins++;
+  addHistory(stake,r.play.profit,selected);money();updateStats();
+  toast(r.play.result==='win'?'🎉 Virtual win +'+r.play.profit+' VC':'Round complete — virtual loss '+Math.abs(r.play.profit)+' VC');
+  selected=null;document.querySelectorAll('.choice,.ball').forEach(x=>x.classList.remove('selected'));
+ }catch(e){toast(e.message)}
+}
 function updateStats(){$('totalBets').textContent=totalBets;$('totalWins').textContent=totalWins;$('winRate').textContent=totalBets?Math.round(totalWins/totalBets*100)+'%':'0%'}
 function addHistory(s,p,r){let tr=document.createElement('tr');tr.innerHTML='<td>'+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</td><td>Win Go</td><td>'+s+' VC</td><td>'+r+'</td><td style="color:'+(p>=0?'#15e39a':'#ff4d6d')+'">'+(p>=0?'+':'')+p+' VC</td>';$('historyRows').prepend(tr);while($('historyRows').children.length>12)$('historyRows').lastChild.remove()}
 function copyReferral(){navigator.clipboard?.writeText('SW777-FRIEND').then(()=>toast('Invite code copied')).catch(()=>toast('Invite code: SW777-FRIEND'))}
@@ -85,9 +94,23 @@ function openProfile(){$('profileModal').classList.add('open')}
 function closeProfile(){$('profileModal').classList.remove('open')}
 function saveProfile(){let n=$('username').value.trim()||'Guest123';document.querySelector('.userpill').innerHTML=n+' · <strong id="balanceTop">'+balance.toLocaleString()+' VC</strong>';closeProfile();toast('Profile saved')}
 function renderExtra(){let names=['Shadow777','LuckyPlayer','ProGamer','KingStar','NovaX'];let el=$('leaders');names.forEach((n,i)=>{let d=document.createElement('div');d.className='leader';d.innerHTML='<div class="rank">'+(i+1)+'</div><b>'+n+'</b><span class="score">'+(9850-i*731).toLocaleString()+' VC</span>';el.appendChild(d)});let nf=$('notifs');['New live round started','Daily bonus is available','Leaderboard updated','Server status: Online'].forEach((n,i)=>{let d=document.createElement('div');d.className='result';d.innerHTML='<span>'+['⚡','🎁','🏆','🟢'][i]+' '+n+'</span><small>'+i*2+1+'m ago</small>';nf.appendChild(d)})}
-function tick(){let left=30-Math.floor((Date.now()-round)/1000)%30;$('timer').textContent='00:'+String(left).padStart(2,'0');$('roundId').textContent='SW'+new Date().toISOString().replace(/[-:TZ.]/g,'').slice(0,14);if(left===30){let n=Math.floor(Math.random()*10);$('balls').innerHTML='<div class="ball '+(n%2?'red':'green')+'">'+n+'</div>';let row=document.createElement('div');row.className='result';row.innerHTML='<span>Round '+n+Date.now().toString().slice(-4)+'</span><b>'+n+'</b>'; $('gameResults').prepend(row);$('latest').prepend(row.cloneNode(true));while($('gameResults').children.length>10)$('gameResults').lastChild.remove();while($('latest').children.length>8)$('latest').lastChild.remove()}} 
-money();updateStats();renderExtra();for(let i=0;i<5;i++){let row=document.createElement('div');row.className='result';row.innerHTML='<span>Win Go • '+(1200+i)+'</span><b>'+(Math.floor(Math.random()*10))+'</b>';$('latest').append(row.cloneNode(true));$('gameResults').append(row)}setInterval(tick,250);tick();
-async function syncServer(){try{let s=await fetch('/api/state').then(r=>r.json());let chip=document.querySelector('.livechip');if(chip)chip.innerHTML='<i></i>Server '+(s.server==='online'?'Online':'Offline');let pc=document.getElementById('onlineCount');if(pc)pc.textContent=s.onlinePlayers.toLocaleString();}catch(e){}}syncServer();setInterval(syncServer,3000);if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+function tick(){let left=30-Math.floor((Date.now()-round)/1000)%30;$('timer').textContent='00:'+String(left).padStart(2,'0');$('roundId').textContent='SW'+new Date().toISOString().replace(/[-:TZ.]/g,'').slice(0,14)} 
+money();updateStats();renderExtra();
+async function boot(){
+ try{
+  const s=await fetch('/api/session',{credentials:'same-origin'}).then(r=>r.json());
+  balance=s.wallet.virtualCoins;money();
+  document.querySelector('.userpill').innerHTML=s.user.username+' · <strong id="balanceTop">'+balance.toLocaleString()+' VC</strong>';
+  const h=await fetch('/api/history',{credentials:'same-origin'}).then(r=>r.json());
+  totalBets=h.plays.length;totalWins=h.plays.filter(x=>x.result==='win').length;updateStats();
+  h.plays.slice().reverse().forEach(x=>addHistory(x.virtualStake,x.profit,x.selection));
+ }catch(e){}
+}
+async function syncServer(){try{let s=await fetch('/api/state').then(r=>r.json());let chip=document.querySelector('.livechip');if(chip)chip.innerHTML='<i></i>Server '+(s.server==='online'?'Online':'Offline');let pc=document.getElementById('onlineCount');if(pc)pc.textContent=s.onlinePlayers.toLocaleString();}catch(e){}}
+const live=new EventSource('/api/live');
+live.onmessage=e=>{try{const m=JSON.parse(e.data);if(m.type==='tick'){$('timer').textContent='00:'+String(m.secondsLeft).padStart(2,'0');$('roundId').textContent=m.id}
+if(m.type==='round_result'){const n=m.round.result;$('balls').innerHTML='<div class="ball '+m.round.color+'">'+n+'</div>';let row=document.createElement('div');row.className='result';row.innerHTML='<span>'+m.round.id+'</span><b>'+n+'</b>';$('gameResults').prepend(row);$('latest').prepend(row.cloneNode(true));while($('gameResults').children.length>10)$('gameResults').lastChild.remove();while($('latest').children.length>8)$('latest').lastChild.remove()}}catch{}};
+boot();syncServer();setInterval(syncServer,5000);if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 </script>
 </body>
 </html>
