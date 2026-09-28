@@ -1,0 +1,14 @@
+services:
+  super-win-777:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      ADMIN_TOKEN: ${ADMIN_TOKEN}
+    volumes:
+      - superwin-data:/app/data
+    restart: unless-stopped
+volumes:
+  superwin-data:
