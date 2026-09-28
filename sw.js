@@ -1,3 +1,3 @@
-const CACHE="sw777-v1";
+const CACHE="sw777-v2";
 self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(["/","/index.html","/manifest.webmanifest"]))));
 self.addEventListener("fetch",e=>e.respondWith(caches.match(e.request).then(x=>x||fetch(e.request).catch(()=>caches.match("/")))));
