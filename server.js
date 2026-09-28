@@ -107,11 +107,12 @@ function tick(){
 createRound();
 setInterval(tick,1000);
 
-function json(res,data,status=200){
+function securityHeaders(res){res.setHeader("X-Content-Type-Options","nosniff");res.setHeader("X-Frame-Options","DENY");res.setHeader("Referrer-Policy","no-referrer");res.setHeader("Permissions-Policy","camera=(),microphone=(),geolocation=()");}
+function json(res,data,status=200){securityHeaders(res);
  res.writeHead(status,{"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"});
  res.end(JSON.stringify(data));
 }
-function serve(res,file,type){
+function serve(res,file,type){securityHeaders(res);
  fs.readFile(path.join(__dirname,file),(e,b)=>{
   if(e){res.writeHead(404);return res.end("Not found")}
   res.writeHead(200,{"Content-Type":type});res.end(b);
@@ -144,7 +145,7 @@ function ensureUser(req,res){
  const token=crypto.randomBytes(32).toString("hex");
  const expires=new Date(Date.now()+30*24*3600*1000).toISOString();
  db.prepare("INSERT INTO sessions(token,userId,createdAt,expiresAt) VALUES(?,?,?,?)").run(token,uid,now,expires);
- res.setHeader("Set-Cookie",`sw_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000`);
+ res.setHeader("Set-Cookie",`sw_session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${process.env.NODE_ENV==="production"?"; Secure":""}`);
  return {id:uid,username,xp:0,vipLevel:1};
 }
 
@@ -159,7 +160,7 @@ const server=http.createServer(async(req,res)=>{
  try{
   const u=new URL(req.url,"http://localhost");
   if(limited(req,u.pathname,u.pathname==="/api/play"?20:120)) return json(res,{error:"Too many requests"},429);
-  if(u.pathname==="/api/health") return json(res,{online:true,mode:"free-play",cash:false,deposit:false,withdrawal:false,payout:false,upi:false,bankTransfer:false,database:true,realtime:true});
+  if(u.pathname==="/api/health") return json(res,{online:true,mode:"free-play",cash:false,deposit:false,withdrawal:false,payout:false,upi:false,bankTransfer:false,database:true,realtime:true,uptime:Math.floor(process.uptime()),memory:process.memoryUsage().rss,activeRealtimeClients:clients.size});
   if(u.pathname==="/api/profile" && req.method==="GET"){
    const user=sessionUser(req); if(!user)return json(res,{error:"Session required"},401);
    return json(res,{profile:db.prepare("SELECT id,username,email,avatar,xp,vipLevel,createdAt,lastLogin FROM users WHERE id=?").get(user.id)});
@@ -244,6 +245,7 @@ const server=http.createServer(async(req,res)=>{
    }catch(e){db.exec("ROLLBACK");throw e}
    return json(res,{ok:true,play:{id:pid,game,selection,result:win?"win":"loss",profit,outcome:outcome.value},wallet:{virtualCoins:newBalance}});
   }
+  if(u.pathname==="/api/metrics"){return json(res,{uptime:process.uptime(),memory:process.memoryUsage(),realtimeClients:clients.size,users:db.prepare("SELECT COUNT(*) c FROM users").get().c,plays:db.prepare("SELECT COUNT(*) c FROM plays").get().c,rounds:db.prepare("SELECT COUNT(*) c FROM rounds").get().c,mode:"free-play"});}
   if(u.pathname==="/api/analytics"){
    const plays=db.prepare("SELECT COUNT(*) c, COALESCE(SUM(virtualStake),0) stake, COALESCE(SUM(profit),0) profit, SUM(CASE WHEN result='win' THEN 1 ELSE 0 END) wins FROM plays").get();
    const games=db.prepare("SELECT game,COUNT(*) plays,COALESCE(SUM(profit),0) profit FROM plays GROUP BY game ORDER BY plays DESC").all();
@@ -276,3 +278,11 @@ const server=http.createServer(async(req,res)=>{
  }catch(e){console.error(e);return json(res,{error:"Server error"},500)}
 });
 server.listen(PORT,()=>console.log("SUPER WIN 777 free-play server listening on "+PORT));
+
+function shutdown(){
+ for(const res of clients){try{res.end()}catch{}}
+ db.close();
+ process.exit(0);
+}
+process.on("SIGTERM",shutdown);
+process.on("SIGINT",shutdown);
