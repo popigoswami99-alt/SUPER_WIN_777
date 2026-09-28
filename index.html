@@ -50,7 +50,7 @@
 
 <section id="play" class="panel">
 <div class="sectionHead"><h2 id="gameTitle">Win Go</h2><span>LIVE • Auto Round</span></div>
-<div class="round"><div class="card"><small>Next Round</small><div class="timer" id="timer">00:30</div><small>Round ID: <span id="roundId"></span></small><div class="gameplay" id="gameStage"><div class="gameStage">🎯<small>Server-authoritative free-play round</small></div></div><div class="balls" id="balls"></div><div class="choices"><button class="choice" onclick="pick(this,'Green')">🟢 Green</button><button class="choice" onclick="pick(this,'Red')">🔴 Red</button><button class="choice" onclick="pick(this,'Violet')">🟣 Violet</button></div><div class="balls"><button class="ball" onclick="pick(this,'Number 0')">0</button><button class="ball" onclick="pick(this,'Number 1')">1</button><button class="ball" onclick="pick(this,'Number 2')">2</button><button class="ball" onclick="pick(this,'Number 3')">3</button><button class="ball" onclick="pick(this,'Number 4')">4</button><button class="ball" onclick="pick(this,'Number 5')">5</button><button class="ball" onclick="pick(this,'Number 6')">6</button><button class="ball" onclick="pick(this,'Number 7')">7</button><button class="ball" onclick="pick(this,'Number 8')">8</button><button class="ball" onclick="pick(this,'Number 9')">9</button></div><div class="betrow"><button onclick="setStake(10)">10 VC</button><button onclick="setStake(50)">50 VC</button><button onclick="setStake(100)">100 VC</button><button class="primary" onclick="placeBet()">Place Virtual Bet</button></div></div><div class="card"><h3 style="margin-top:0">Recent Results</h3><div class="resultlist" id="gameResults"></div></div></div>
+<div class="round"><div class="card"><small>Next Round</small><div class="timer" id="timer">00:30</div><small>Round ID: <span id="roundId"></span></small><div class="gameplay" id="gameStage"><div class="gameStage">🎯<small>Server-authoritative free-play round</small></div></div><div class="balls" id="balls"></div><div class="choices" id="gameChoices"></div><div class="balls" id="gameBalls"></div><div class="betrow"><button onclick="setStake(10)">10 VC</button><button onclick="setStake(50)">50 VC</button><button onclick="setStake(100)">100 VC</button><button class="primary" onclick="placeBet()">Place Virtual Bet</button></div></div></div><div class="card"><h3 style="margin-top:0">Recent Results</h3><div class="resultlist" id="gameResults"></div></div></div>
 </section>
 
 <section id="wallet" class="panel"><div class="sectionHead"><h2>Virtual Wallet</h2><span>Non-cash balance</span></div><div class="card"><small>Total Balance (Virtual)</small><div class="walletBig" id="walletBalance">1,250 VC</div><p style="color:#8da2bb">Virtual coins have no cash value and cannot be deposited or withdrawn.</p><div class="lockbox"><div class="lock"><div class="ico">🔒</div><strong>Deposit</strong><small>Currently Locked</small></div><div class="lock"><div class="ico">🔒</div><strong>Withdraw</strong><small>Currently Locked</small></div></div></div><div class="stats" style="margin-top:10px"><div class="stat"><small>Total Bets</small><b id="totalBets">0</b></div><div class="stat"><small>Total Wins</small><b id="totalWins">0</b></div><div class="stat"><small>Win Rate</small><b id="winRate">0%</b></div></div></section>
@@ -89,7 +89,21 @@ function openGame(name){
   'Card Room':'<div class="gameStage"><div class="cards"><span>♠ A</span><span>♥ 7</span><span>♦ K</span></div><small>Virtual card demo</small></div>',
   'Sports':'<div class="gameStage"><div class="match"><span>⚽ Team A</span><b>0 : 0</b><span>Team B ⚽</span></div><small>Virtual match demo</small></div>'
  };
- stage.innerHTML=views[name]||views['Win Go'];toast(name+' opened — virtual coins only');
+ stage.innerHTML=views[name]||views['Win Go'];renderChoices();toast(name+' opened — virtual coins only');
+}
+function renderChoices(){
+ const box=$('gameChoices'), balls=$('gameBalls'); if(!box||!balls)return;
+ const maps={
+  'Win Go':['Green','Red','Violet'],'Fast Parity':['Green','Red','Violet'],
+  'K3 Lottery':['sum:3','sum:10','sum:18','triple'],
+  '5D Lottery':['lucky'],
+  'Slots':['lucky'],
+  'Crash':['under2','under3'],
+  'Card Room':['red','black'],
+  'Sports':['home','away','draw']
+ };
+ box.innerHTML=(maps[currentGame]||maps['Win Go']).map(x=>'<button class="choice" onclick="pick(this,\''+x+'\')">'+x+'</button>').join('');
+ balls.innerHTML=currentGame==='Win Go'?Array.from({length:10},(_,i)=>'<button class="ball" onclick="pick(this,\''+i+'\')">'+i+'</button>').join(''):'';
 }
 function setStake(n){stake=n;toast('Stake set to '+n+' VC')}
 function pick(el,val){document.querySelectorAll('.choice,.ball').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');selected=val}
@@ -111,7 +125,7 @@ function closeProfile(){$('profileModal').classList.remove('open')}
 async function saveProfile(){let n=$('username').value.trim()||'Guest123';try{const r=await fetch('/api/profile',{method:'PATCH',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:n})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Profile failed');document.querySelector('.userpill').innerHTML=d.profile.username+' · <strong id="balanceTop">'+balance.toLocaleString()+' VC</strong>';closeProfile();toast('Profile saved')}catch(e){toast(e.message)}}
 async function renderExtra(){try{const [l,n,m,a]=await Promise.all([fetch('/api/leaderboard').then(r=>r.json()),fetch('/api/notifications').then(r=>r.json()),fetch('/api/missions').then(r=>r.json()),fetch('/api/achievements').then(r=>r.json())]);const el=$('leaders');if(el){el.innerHTML='';(l.leaders||[]).forEach((x,i)=>{const d=document.createElement('div');d.className='leader';d.innerHTML='<div class="rank">'+(i+1)+'</div><b>'+x.username+'</b><span class="score">'+Number(x.score).toLocaleString()+' VC</span>';el.appendChild(d)})}const nf=$('notifs');if(nf){nf.innerHTML='';(n.notifications||[]).forEach(x=>{const d=document.createElement('div');d.className='result';d.innerHTML='<span>🔔 '+x.title+' — '+x.body+'</span><small>'+new Date(x.createdAt).toLocaleString()+'</small>';nf.appendChild(d)})}window.serverMissions=m.missions||[];window.serverAchievements=a.achievements||[]}catch{}}
 function tick(){let left=30-Math.floor((Date.now()-round)/1000)%30;$('timer').textContent='00:'+String(left).padStart(2,'0');$('roundId').textContent='SW'+new Date().toISOString().replace(/[-:TZ.]/g,'').slice(0,14)} 
-money();updateStats();renderExtra();
+money();updateStats();renderChoices();renderExtra();
 async function boot(){
  try{
   const s=await fetch('/api/session',{credentials:'same-origin'}).then(r=>r.json());
