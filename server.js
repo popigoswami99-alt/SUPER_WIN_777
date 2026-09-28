@@ -50,6 +50,8 @@ let roundNo=Number(process.env.START_ROUND||1000);
 let roundEnds=Date.now()+30000;
 const history=[];
 const clients=new Set();
+const rate=new Map();
+function limited(req,key,limit=30,windowMs=60000){const k=key||req.socket.remoteAddress||"unknown";const now=Date.now();const a=(rate.get(k)||[]).filter(t=>now-t<windowMs);a.push(now);rate.set(k,a);return a.length>limit;}
 
 function broadcast(payload){
  const data=`data: ${JSON.stringify(payload)}\\n\\n`;
@@ -129,6 +131,7 @@ const leaderboard=()=>db.prepare(`
 const server=http.createServer(async(req,res)=>{
  try{
   const u=new URL(req.url,"http://localhost");
+  if(limited(req,u.pathname,u.pathname==="/api/play"?20:120)) return json(res,{error:"Too many requests"},429);
   if(u.pathname==="/api/health") return json(res,{online:true,mode:"free-play",cash:false,deposit:false,withdrawal:false,payout:false,upi:false,bankTransfer:false,database:true,realtime:true});
   if(u.pathname==="/api/session" && req.method==="GET"){
    const user=ensureUser(req,res);
@@ -176,6 +179,12 @@ const server=http.createServer(async(req,res)=>{
     db.exec("COMMIT");
    }catch(e){db.exec("ROLLBACK");throw e}
    return json(res,{ok:true,play:{id:pid,result:win?"win":"loss",profit},wallet:{virtualCoins:newBalance}});
+  }
+  if(u.pathname==="/api/analytics"){
+   const plays=db.prepare("SELECT COUNT(*) c, COALESCE(SUM(virtualStake),0) stake, COALESCE(SUM(profit),0) profit, SUM(CASE WHEN result='win' THEN 1 ELSE 0 END) wins FROM plays").get();
+   const games=db.prepare("SELECT game,COUNT(*) plays,COALESCE(SUM(profit),0) profit FROM plays GROUP BY game ORDER BY plays DESC").all();
+   const rounds=db.prepare("SELECT COUNT(*) c FROM rounds").get();
+   return json(res,{virtualOnly:true,plays,rounds:rounds.c,games});
   }
   if(u.pathname==="/api/history"){
    const user=sessionUser(req);if(!user)return json(res,{plays:[]});
