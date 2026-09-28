@@ -32,3 +32,18 @@ For public 24x7 uptime, deploy the server to an always-on host and add a persist
 
 ## Cash boundary
 Deposit, withdrawal, cash payout, UPI and bank-transfer functionality are not implemented.
+
+
+## Backend status
+
+The platform now uses a persistent SQLite database through Node's `node:sqlite` runtime, server-authoritative virtual play processing, cookie sessions, persistent play history, derived leaderboard data, daily mission progress, notification storage, audit logging, and Server-Sent Events for live round updates.
+
+### Run
+
+```bash
+npm start
+```
+
+Node.js 22+ is required. Set `ADMIN_TOKEN` in the server environment before using authenticated admin broadcast actions.
+
+The project remains strictly free-play: virtual coins have no cash value and deposit, withdrawal, payout, UPI, and bank-transfer functionality remain disabled.
