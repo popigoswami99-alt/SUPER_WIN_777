@@ -12,5 +12,5 @@
 <script>
 async function load(){try{const [s,h]=await Promise.all([fetch("/api/state").then(r=>r.json()),fetch("/api/health").then(r=>r.json())]);server.textContent="ONLINE";health.textContent=h.database?"SQLite + SSE realtime":"Backend ready";round.textContent=s.round.id;timer.textContent=s.round.secondsLeft+" sec";players.textContent=s.onlinePlayers.toLocaleString()}catch{server.textContent="OFFLINE";}}
 async function broadcast(){const msg=document.getElementById("msg");try{const r=await fetch("/api/admin/notify",{method:"POST",headers:{"Content-Type":"application/json","x-admin-token":token.value},body:JSON.stringify({title:title.value,body:body.value})});const d=await r.json();msg.textContent=r.ok?"✓ Notification broadcast":"✕ "+(d.error||"Failed");}catch{msg.textContent="✕ Request failed"}}
-load();setInterval(load,1000);
+async function analytics(){try{const d=await fetch("/api/analytics").then(r=>r.json());stats.textContent=JSON.stringify(d,null,2)}catch{stats.textContent="Analytics unavailable"}}load();setInterval(load,1000);
 </script></body></html>
