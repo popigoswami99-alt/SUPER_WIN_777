@@ -23,10 +23,10 @@ test("server exposes persistent realtime architecture",()=>{
 test("server supports multi-game free-play and safety controls",()=>{
  const source=fs.readFileSync(path.join(__dirname,"..","server.js"),"utf8");
  assert.match(source,/gamesAllow/);
- assert.match(source,//api/profile/);
- assert.match(source,//api/achievements/);
- assert.match(source,//api/referral/);
- assert.match(source,//api/admin/audit/);
+ assert.match(source,/\\/api\\/profile/);
+ assert.match(source,/\\/api\\/achievements/);
+ assert.match(source,/\\/api\\/referral/);
+ assert.match(source,/\\/api\\/admin\\/audit/);
  assert.match(source,/Too many requests/);
  assert.match(source,/virtualOnly:true/);
 });
