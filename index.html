@@ -105,7 +105,7 @@ async function placeBet(){
 }
 function updateStats(){$('totalBets').textContent=totalBets;$('totalWins').textContent=totalWins;$('winRate').textContent=totalBets?Math.round(totalWins/totalBets*100)+'%':'0%'}
 function addHistory(s,p,r){let tr=document.createElement('tr');tr.innerHTML='<td>'+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+'</td><td>Win Go</td><td>'+s+' VC</td><td>'+r+'</td><td style="color:'+(p>=0?'#15e39a':'#ff4d6d')+'">'+(p>=0?'+':'')+p+' VC</td>';$('historyRows').prepend(tr);while($('historyRows').children.length>12)$('historyRows').lastChild.remove()}
-function copyReferral(){navigator.clipboard?.writeText('SW777-FRIEND').then(()=>toast('Invite code copied')).catch(()=>toast('Invite code: SW777-FRIEND'))}
+async function copyReferral(){try{const d=await fetch('/api/referral').then(r=>r.json());const code=d.code||'SW777-FRIEND';navigator.clipboard?.writeText(code);toast('Invite code: '+code)}catch{toast('Referral unavailable')}}
 function openProfile(){$('profileModal').classList.add('open')}
 function closeProfile(){$('profileModal').classList.remove('open')}
 async function saveProfile(){let n=$('username').value.trim()||'Guest123';try{const r=await fetch('/api/profile',{method:'PATCH',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:n})});const d=await r.json();if(!r.ok)throw new Error(d.error||'Profile failed');document.querySelector('.userpill').innerHTML=d.profile.username+' · <strong id="balanceTop">'+balance.toLocaleString()+' VC</strong>';closeProfile();toast('Profile saved')}catch(e){toast(e.message)}}
