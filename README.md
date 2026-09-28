@@ -28,7 +28,7 @@ Requires Node.js 22+.
 Run: npm start
 Then open http://localhost:3000.
 
-For public 24x7 uptime, deploy the server to an always-on host and add a persistent database and authenticated user system.
+For public 24x7 uptime, deploy the server to an always-on Node 22+ host, keep the SQLite volume persistent, terminate TLS at the edge, and provide ADMIN_TOKEN through a secret environment variable.
 
 ## Cash boundary
 Deposit, withdrawal, cash payout, UPI and bank-transfer functionality are not implemented.
@@ -56,7 +56,9 @@ The project remains strictly free-play: virtual coins have no cash value and dep
 - Lightweight API rate limiting for abuse protection.
 - PWA install icon and improved metadata.
 - Server-side session, wallet, play, mission, notification, audit and realtime systems.
-- Automated backend architecture tests.
+- Automated backend architecture and syntax tests.
+- Production container and Compose configuration.
+- Health, metrics, active-session tracking, security headers, graceful shutdown and improved PWA cache lifecycle.
 
 ### Deployment
 
